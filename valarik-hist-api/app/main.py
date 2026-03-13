@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+import os
 from app.services.fund_scheduler import start_fund_scheduler
 
 from app.core.cors import setup_cors
@@ -25,10 +26,31 @@ def create_app() -> FastAPI:
 
     @app.on_event("startup")
     def _startup():
-        ensure_daily_cache_loaded()
-        start_daily_scheduler()
-        #start_fund_scheduler()
-        start_realtime_scheduler(td_fetch_last_1m)
+        skip_warmup = os.getenv("SKIP_STARTUP_WARMUP", "0") == "1"
+        enable_daily = os.getenv("ENABLE_DAILY_SCHEDULER", "1") == "1"
+        enable_realtime = os.getenv("ENABLE_REALTIME_SCHEDULER", "1") == "1"
+        enable_fund = os.getenv("ENABLE_FUND_SCHEDULER", "0") == "1"
+
+        if skip_warmup:
+            print("[APP] skipping daily cache warmup by SKIP_STARTUP_WARMUP=1")
+        else:
+            ensure_daily_cache_loaded()
+
+        if enable_daily:
+            start_daily_scheduler()
+        else:
+            print("[APP] daily scheduler disabled by ENABLE_DAILY_SCHEDULER=0")
+
+        if enable_fund:
+            start_fund_scheduler()
+        else:
+            print("[APP] fund scheduler disabled by ENABLE_FUND_SCHEDULER=0")
+
+        if enable_realtime:
+            start_realtime_scheduler(td_fetch_last_1m)
+        else:
+            print("[APP] realtime scheduler disabled by ENABLE_REALTIME_SCHEDULER=0")
+
         print("[APP] startup complete")
     return app
 
