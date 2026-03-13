@@ -16,7 +16,15 @@ def start_realtime_scheduler(fetch_1m: Callable[[str, int], List[Dict[str, Any]]
     interval = int(os.getenv("INGEST_INTERVAL_SEC", "60"))
     freeze_sleep = int(os.getenv("CLOSED_SLEEP_SEC", "120"))
 
-    load_snapshot_on_start()
+    restore_snapshot = os.getenv("LOAD_RT_SNAPSHOT_ON_START", "1") == "1"
+
+    if restore_snapshot:
+        try:
+            load_snapshot_on_start()
+        except Exception as e:
+            print("[RT][SNAPSHOT][ERR]", repr(e))
+    else:
+        print("[RT] snapshot restore disabled by LOAD_RT_SNAPSHOT_ON_START=0")
 
     last_key_seen: dict[str, int] = {}
 
